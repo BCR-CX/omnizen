@@ -1,6 +1,6 @@
 -r requirements.txt
-ruff
-pytest
-pytest-cov
-tox
-pre-commit
+ruff==0.12.7
+pytest==8.4.1
+pytest-cov==6.2.1
+tox==4.28.4
+pre-commit==4.2.0
