@@ -21,10 +21,10 @@ def test_client_init():
 
     client = ZendeskAPIClient(email=email, api_token=api_token, domain=domain)
 
-    assert client.session.auth == HTTPBasicAuth(email + "/token", api_token)
-    assert client.session.headers["Content-Type"] == "application/json"
-    assert client.session.params == {"locale": "en"}
-    assert client.base_url == f"https://{domain}.zendesk.com/api/v2"
+    assert client._session.auth == HTTPBasicAuth(email + "/token", api_token)
+    assert client._session.headers["Content-Type"] == "application/json"
+    assert client._session.params == {"locale": "en"}
+    assert client._base_url == f"https://{domain}.zendesk.com/api/v2"
 
 
 def test_client_response_ok(client, mock_response_200):
@@ -68,7 +68,7 @@ def test_default_timeout_parameter(client):
     """
     Test that default timeout is applied to requests.
     """
-    with patch.object(client.session, "get") as mock_get:
+    with patch.object(client._session, "get") as mock_get:
         mock_response = MagicMock()
         mock_response.json.return_value = {"test": "data"}
         mock_response.status_code = 200
@@ -85,7 +85,7 @@ def test_custom_timeout_parameter(client):
     """
     Test that custom timeout is applied to requests.
     """
-    with patch.object(client.session, "get") as mock_get:
+    with patch.object(client._session, "get") as mock_get:
         mock_response = MagicMock()
         mock_response.json.return_value = {"test": "data"}
         mock_response.status_code = 200
@@ -111,7 +111,7 @@ def test_timeout_on_all_http_methods(client):
     ]
 
     for method_name, args, kwargs in methods_and_params:
-        with patch.object(client.session, method_name) as mock_method:
+        with patch.object(client._session, method_name) as mock_method:
             mock_response = MagicMock()
             mock_response.json.return_value = {"test": "data"}
             mock_response.status_code = 200
@@ -129,7 +129,7 @@ def test_connect_timeout_handling(client):
     """
     Test handling of connection timeout exceptions.
     """
-    with patch.object(client.session, "get") as mock_get:
+    with patch.object(client._session, "get") as mock_get:
         mock_get.side_effect = ConnectTimeout("Connection timeout")
 
         with pytest.raises(ConnectTimeout):
@@ -140,7 +140,7 @@ def test_read_timeout_handling(client):
     """
     Test handling of read timeout exceptions.
     """
-    with patch.object(client.session, "get") as mock_get:
+    with patch.object(client._session, "get") as mock_get:
         mock_get.side_effect = ReadTimeout("Read timeout")
 
         with pytest.raises(ReadTimeout):
@@ -202,3 +202,13 @@ def test_max_retries_exceeded(client):
         response = client.get("/")
         assert response.status_code == 500
         assert fake_conn.getresponse.call_count == 4
+
+
+def test_client_context_manager(mock_response_200):
+    """
+    Test that the client can be used as a context manager.
+    """
+
+    with ZendeskAPIClient() as client:
+        response = client.get("/")
+        assert response.status_code == 200

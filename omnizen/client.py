@@ -29,25 +29,26 @@ class ZendeskAPIClient:
         """
         Initializes the ZendeskAPIClient with the provided credentials.
         """
-        self.base_url = f"https://{domain}.zendesk.com/api/v2"
+        self.domain = domain
         self.email = email
         self.api_token = api_token
 
-        self.session = requests.Session()
-        retries = Retry(
+        self._base_url = f"https://{domain}.zendesk.com/api/v2"
+        self._session = requests.Session()
+        _retries = Retry(
             total=3,
             backoff_factor=1,
             status_forcelist=[404, 429, 500, 502, 503, 504],
             allowed_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
             raise_on_status=False,
         )
-        self.session.auth = HTTPBasicAuth(f"{self.email}/token", self.api_token)
-        self.session.headers.update({"Content-Type": "application/json"})
-        self.session.params = {"locale": "en"}
+        self._session.auth = HTTPBasicAuth(f"{self.email}/token", self.api_token)
+        self._session.headers.update({"Content-Type": "application/json"})
+        self._session.params = {"locale": "en"}
 
-        adapter = HTTPAdapter(max_retries=retries)
-        self.session.mount("https://", adapter)
-        self.session.mount("http://", adapter)
+        _adapter = HTTPAdapter(max_retries=_retries)
+        self._session.mount("https://", _adapter)
+        self._session.mount("http://", _adapter)
 
     def get(
         self, endpoint: str, params: Optional[dict] = None, timeout: int = 10
@@ -55,8 +56,8 @@ class ZendeskAPIClient:
         """
         Sends a GET request to the Zendesk API.
         """
-        return self.session.get(
-            f"{self.base_url}{endpoint}",
+        return self._session.get(
+            f"{self._base_url}{endpoint}",
             params=params,
             timeout=timeout,
         )
@@ -72,8 +73,8 @@ class ZendeskAPIClient:
         Sends a POST request to the Zendesk API.
         """
         logger.debug(f"Sending POST {endpoint} | Data {data}")
-        return self.session.post(
-            f"{self.base_url}{endpoint}",
+        return self._session.post(
+            f"{self._base_url}{endpoint}",
             json=data,
             timeout=timeout,
             params=params,
@@ -90,8 +91,8 @@ class ZendeskAPIClient:
         Sends a PATCH request to the Zendesk API.
         """
         logger.debug(f"Sending PATCH {endpoint} | Data {data}")
-        return self.session.patch(
-            f"{self.base_url}{endpoint}",
+        return self._session.patch(
+            f"{self._base_url}{endpoint}",
             json=data,
             timeout=timeout,
             params=params,
@@ -108,8 +109,8 @@ class ZendeskAPIClient:
         Sends a PUT request to the Zendesk API.
         """
         logger.debug(f"Sending PUT {endpoint} | Data {data}")
-        return self.session.put(
-            f"{self.base_url}{endpoint}",
+        return self._session.put(
+            f"{self._base_url}{endpoint}",
             json=data,
             timeout=timeout,
             params=params,
@@ -122,8 +123,8 @@ class ZendeskAPIClient:
         Sends a DELETE request to the Zendesk API.
         """
         logger.debug(f"Sending DELETE {endpoint}")
-        return self.session.delete(
-            f"{self.base_url}{endpoint}",
+        return self._session.delete(
+            f"{self._base_url}{endpoint}",
             timeout=timeout,
             params=params,
         )
@@ -134,10 +135,22 @@ class ZendeskAPIClient:
         """
         Uploads a file to Zendesk.
         """
-        return self.session.post(
-            f"{self.base_url}/uploads",
+        return self._session.post(
+            f"{self._base_url}/uploads",
             headers={"Content-Type": "application/binary"},
             data=content,
             params={"filename": filename},
             timeout=timeout,
         )
+
+    def __enter__(self):
+        """
+        Context manager entry method.
+        """
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """
+        Context manager exit method.
+        """
+        self._session.close()

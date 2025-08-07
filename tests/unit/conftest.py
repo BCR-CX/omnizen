@@ -1,14 +1,14 @@
 import pytest
+from omnizen.settings import settings
 
-DOMAIN = "test"
-BASE_URL = "https://test.zendesk.com/api/v2"
+BASE_URL = f"https://{settings.domain}.zendesk.com/api/v2"
 
 
 @pytest.fixture
 def client():
     from omnizen.client import ZendeskAPIClient
 
-    return ZendeskAPIClient(domain=DOMAIN)
+    return ZendeskAPIClient()
 
 
 @pytest.fixture
