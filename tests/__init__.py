@@ -1,3 +1,3 @@
 """
-Unit tests for the omnizen package.
+Tests for the Omnizen package.
 """
