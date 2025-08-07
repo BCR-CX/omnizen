@@ -21,77 +21,10 @@ def test_client_init():
 
     client = ZendeskAPIClient(email=email, api_token=api_token, domain=domain)
 
-    assert client.auth == HTTPBasicAuth(email + "/token", api_token)
+    assert client.session.auth == HTTPBasicAuth(email + "/token", api_token)
+    assert client.session.headers["Content-Type"] == "application/json"
+    assert client.session.params == {"locale": "en"}
     assert client.base_url == f"https://{domain}.zendesk.com/api/v2"
-
-
-def test_auth_parameter_in_requests():
-    """
-    Test that the correct auth parameter is passed to all HTTP requests.
-    """
-    email = "test@example.com"
-    api_token = "test_api_token"
-    domain = "test_domain"
-
-    client = ZendeskAPIClient(email=email, api_token=api_token, domain=domain)
-
-    with patch.object(client.session, "get") as mock_get, patch.object(
-        client.session, "post"
-    ) as mock_post, patch.object(client.session, "patch") as mock_patch, patch.object(
-        client.session, "put"
-    ) as mock_put, patch.object(
-        client.session, "delete"
-    ) as mock_delete:
-
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"test": "data"}
-        mock_response.status_code = 200
-
-        mock_get.return_value = mock_response
-        mock_post.return_value = mock_response
-        mock_patch.return_value = mock_response
-        mock_put.return_value = mock_response
-        mock_delete.return_value = mock_response
-
-        # Test GET request
-        client.get("/test")
-        mock_get.assert_called_once()
-        get_call_kwargs = mock_get.call_args.kwargs
-        assert isinstance(get_call_kwargs["auth"], HTTPBasicAuth)
-        assert get_call_kwargs["auth"].username == f"{email}/token"
-        assert get_call_kwargs["auth"].password == api_token
-
-        # Test POST request
-        client.post("/test", {"data": "test"})
-        mock_post.assert_called_once()
-        post_call_kwargs = mock_post.call_args.kwargs
-        assert isinstance(post_call_kwargs["auth"], HTTPBasicAuth)
-        assert post_call_kwargs["auth"].username == f"{email}/token"
-        assert post_call_kwargs["auth"].password == api_token
-
-        # Test PATCH request
-        client.patch("/test", {"data": "test"})
-        mock_patch.assert_called_once()
-        patch_call_kwargs = mock_patch.call_args.kwargs
-        assert isinstance(patch_call_kwargs["auth"], HTTPBasicAuth)
-        assert patch_call_kwargs["auth"].username == f"{email}/token"
-        assert patch_call_kwargs["auth"].password == api_token
-
-        # Test PUT request
-        client.put("/test", {"data": "test"})
-        mock_put.assert_called_once()
-        put_call_kwargs = mock_put.call_args.kwargs
-        assert isinstance(put_call_kwargs["auth"], HTTPBasicAuth)
-        assert put_call_kwargs["auth"].username == f"{email}/token"
-        assert put_call_kwargs["auth"].password == api_token
-
-        # Test DELETE request
-        client.delete("/test")
-        mock_delete.assert_called_once()
-        delete_call_kwargs = mock_delete.call_args.kwargs
-        assert isinstance(delete_call_kwargs["auth"], HTTPBasicAuth)
-        assert delete_call_kwargs["auth"].username == f"{email}/token"
-        assert delete_call_kwargs["auth"].password == api_token
 
 
 def test_client_response_ok(client, mock_response_200):
@@ -100,7 +33,7 @@ def test_client_response_ok(client, mock_response_200):
     """
     response = client.get("/")
 
-    assert response["status_code"] == 200
+    assert response.status_code == 200
 
 
 def test_client_response_error(client, mock_response_500):
@@ -109,7 +42,7 @@ def test_client_response_error(client, mock_response_500):
     """
     response = client.get("/")
 
-    assert response["status_code"] == 500
+    assert response.status_code == 500
 
 
 def test_upload_file_response_ok(client, mock_upload_response_200):
@@ -118,7 +51,7 @@ def test_upload_file_response_ok(client, mock_upload_response_200):
     """
     response = client.upload_file(content=b"test", filename="test.txt")
 
-    assert response["status_code"] == 201
+    assert response.status_code == 201
 
 
 def test_client_response_not_serializable(client, mock_response_not_serializable):
@@ -127,10 +60,8 @@ def test_client_response_not_serializable(client, mock_response_not_serializable
     """
     response = client.get("/")
 
-    assert response["error"] == {
-        "message": "Expecting value: line 1 column 1 (char 0)",
-        "title": "",
-    }
+    with pytest.raises(ValueError):
+        response.json()
 
 
 def test_default_timeout_parameter(client):
@@ -269,5 +200,5 @@ def test_max_retries_exceeded(client):
         "urllib3.connectionpool.HTTPConnectionPool._get_conn", return_value=fake_conn
     ), patch("urllib3.util.retry.Retry.sleep"):
         response = client.get("/")
-        assert response["status_code"] == 500
+        assert response.status_code == 500
         assert fake_conn.getresponse.call_count == 4
