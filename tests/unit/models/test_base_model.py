@@ -5,7 +5,7 @@ allowing for instantiation in tests.
 """
 
 import pytest
-from omnizen.models.base import BaseModel, BulkResponse
+from omnizen.models.base import BaseModel
 from omnizen.fields.base import Field
 
 

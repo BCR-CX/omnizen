@@ -8,7 +8,7 @@ from requests.auth import HTTPBasicAuth
 from requests.exceptions import ConnectTimeout, ReadTimeout
 from http.client import HTTPMessage
 
-from omnizen.client import ZendeskAPIClient
+from omnizen.clients.client import ZendeskAPIClient
 
 
 def test_client_init():
@@ -160,9 +160,13 @@ def test_retry_on_server_errors(client, status_code):
         MagicMock(status=200, msg=HTTPMessage()),
     ]
 
-    with patch(
-        "urllib3.connectionpool.HTTPConnectionPool._get_conn", return_value=fake_conn
-    ), patch("urllib3.util.retry.Retry.sleep"):
+    with (
+        patch(
+            "urllib3.connectionpool.HTTPConnectionPool._get_conn",
+            return_value=fake_conn,
+        ),
+        patch("urllib3.util.retry.Retry.sleep"),
+    ):
         client.get("/")
         assert fake_conn.getresponse.call_count == 4
 
@@ -177,9 +181,13 @@ def test_no_retry_on_successful_responses(client, status_code):
         MagicMock(status=status_code, msg=HTTPMessage()),
     ]
 
-    with patch(
-        "urllib3.connectionpool.HTTPConnectionPool._get_conn", return_value=fake_conn
-    ), patch("urllib3.util.retry.Retry.sleep"):
+    with (
+        patch(
+            "urllib3.connectionpool.HTTPConnectionPool._get_conn",
+            return_value=fake_conn,
+        ),
+        patch("urllib3.util.retry.Retry.sleep"),
+    ):
         client.get("/")
         assert fake_conn.getresponse.call_count == 1
 
@@ -196,9 +204,13 @@ def test_max_retries_exceeded(client):
         MagicMock(status=500, msg=HTTPMessage()),
     ]
 
-    with patch(
-        "urllib3.connectionpool.HTTPConnectionPool._get_conn", return_value=fake_conn
-    ), patch("urllib3.util.retry.Retry.sleep"):
+    with (
+        patch(
+            "urllib3.connectionpool.HTTPConnectionPool._get_conn",
+            return_value=fake_conn,
+        ),
+        patch("urllib3.util.retry.Retry.sleep"),
+    ):
         response = client.get("/")
         assert response.status_code == 500
         assert fake_conn.getresponse.call_count == 4
